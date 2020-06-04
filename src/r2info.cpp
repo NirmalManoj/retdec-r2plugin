@@ -51,26 +51,11 @@ std::string R2InfoProvider::fetchFilePath() const
 }
 
 /**
- * @brief Fetches the currently seeked function in Radare2 console.
- */
-Function R2InfoProvider::fetchCurrentFunction() const
-{
-	RAnalFunction *cf = r_anal_get_fcn_in(_r2core.anal, _r2core.offset, R_ANAL_FCN_TYPE_NULL);
-	if (cf == nullptr) {
-		std::ostringstream errMsg;
-		errMsg << "no function at offset 0x" << std::hex << _r2core.offset;
-		throw DecompilationError(errMsg.str());
-	}
-
-	return convertFunctionObject(*cf);
-}
-
-/**
- * @brief Fetches the function at the address passes as parameter.
+ * @brief Fetches the function at the address passed as parameter.
  * 
  * @param addr Decompiles the function at the given address.
  */
-Function R2InfoProvider::fetchCurrentFunctionForCutter(ut64 addr) const
+Function R2InfoProvider::fetchCurrentFunction(ut64 addr) const
 {
 	RAnalFunction *cf = r_anal_get_fcn_in(_r2core.anal, addr, R_ANAL_FCN_TYPE_NULL);
 	if (cf == nullptr) {

@@ -212,61 +212,12 @@ fs::path getOutDirPath()
  * @brief Main decompilation method. Uses RetDec to decompile input binary.
  *
  * Decompiles binary on input by configuring and calling RetDec decompiler script.
- *
- * @param binInfo Provides informations gathered from r2 console.
- */
-RAnnotatedCode* decompile(const R2InfoProvider &binInfo)
-{
-	try {
-		R2CGenerator outgen;
-		auto outDir = getOutDirPath();
-		auto config = retdec::config::Config::empty(
-				(outDir/"rd_config.json").string());
-
-		auto rdpath = fetchRetdecPath();
-
-		std::string binName = binInfo.fetchFilePath();
-		binInfo.fetchFunctionsAndGlobals(config);
-		config.generateJsonFile();
-
-		auto fnc = binInfo.fetchCurrentFunction();
-
-		auto decpath = outDir/"rd_dec.json";
-		auto outpath = outDir/"rd_out.log";
-
-		std::ostringstream decrange;
-		decrange << fnc.getStart() << "-" << fnc.getEnd();
-
-		std::vector<std::string> decparams {
-			sanitizePath(binName),
-			"--cleanup",
-			"--config", sanitizePath(config.getConfigFileName()),
-			"-f", "json-human",
-			//"--select-decode-only",
-			"--select-ranges", decrange.str(),
-			"-o", sanitizePath(decpath.string())
-
-		};
-
-		run(sanitizePath(rdpath), decparams, sanitizePath(outpath.string()));
-		return outgen.generateOutput(decpath.string());
-	}
-	catch (const DecompilationError &err) {
-		std::cerr << "retdec-r2plugin: " << err.what() << std::endl;
-		return nullptr;
-	}
-}
-
-/**
- * @brief Main decompilation method. Uses RetDec to decompile input binary.
- *
- * Decompiles binary on input by configuring and calling RetDec decompiler script.
  * Decompiles the binary given by the offset passed addr.
  * 
  * @param binInfo Provides informations gathered from r2 console.
  * @param addr Decompiles the function at this offset.
  */
-RAnnotatedCode* decompileForCutter(const R2InfoProvider &binInfo, ut64 addr)
+RAnnotatedCode* decompile(const R2InfoProvider &binInfo, ut64 addr)
 {
 	try {
 		R2CGenerator outgen;
@@ -280,7 +231,7 @@ RAnnotatedCode* decompileForCutter(const R2InfoProvider &binInfo, ut64 addr)
 		binInfo.fetchFunctionsAndGlobals(config);
 		config.generateJsonFile();
 
-		auto fnc = binInfo.fetchCurrentFunctionForCutter(addr);
+		auto fnc = binInfo.fetchCurrentFunction(addr);
 
 		auto decpath = outDir/"rd_dec.json";
 		auto outpath = outDir/"rd_out.log";
@@ -350,7 +301,7 @@ static void _cmd(RCore &core, const char &input)
 	std::lock_guard<std::mutex> lock (mutex);
 
 	R2InfoProvider binInfo(core);
-	auto code = decompile(binInfo);
+	auto code = decompile(binInfo, core.offset);
 	if (code == nullptr) {
 		return;
 	}
@@ -366,7 +317,7 @@ RAnnotatedCode* r2retdec_decompile_annotated_code(RCore *core, ut64 addr){
 	std::lock_guard<std::mutex> lock (mutex);
 
 	R2InfoProvider binInfo(*core);
-	return decompileForCutter(binInfo, addr);
+	return decompile(binInfo, addr);
 }
 
 /**
